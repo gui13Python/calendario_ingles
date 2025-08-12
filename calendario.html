@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plano de Estudo de Inglês</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .progress-bar-container {
+            height: 1.5rem;
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar {
+            height: 100%;
+            transition: width 0.5s ease-in-out;
+            background-color: #3b82f6;
+            border-radius: 9999px;
+        }
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffffff;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+        .day-item-text {
+            flex-grow: 1;
+        }
+        .motivational-phrase {
+            color: #6b7280;
+            font-size: 0.75rem; /* 12px */
+            font-style: italic;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center p-4 min-h-screen">
+
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl w-full max-w-2xl mt-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Meu Plano de Estudo de Inglês</h1>
+            <div id="message-box" class="hidden px-4 py-2 text-sm rounded-lg"></div>
+        </div>
+
+        <div class="progress-bar-container mb-4">
+            <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+            <span id="progress-percentage-text" class="progress-text">0%</span>
+        </div>
+        <p class="text-center text-lg font-medium text-gray-600 mb-6">
+            <span id="progress-text-label" class="text-blue-600 font-bold">0</span> de <span id="total-days">0</span> dias concluídos
+        </p>
+
+        <div id="checklist-container" class="space-y-3">
+            <!-- A lista de dias será gerada aqui pelo JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Use uma IIFE (Immediately Invoked Function Expression) para encapsular o código e evitar poluição do escopo global.
+        (function() {
+            // Define a data de início (amanhã) e a data de fim (31 de dezembro do ano atual).
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+
+            const endOfYear = new Date(today.getFullYear(), 11, 31);
+
+            const checklistContainer = document.getElementById('checklist-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressTextLabel = document.getElementById('progress-text-label');
+            const progressPercentageText = document.getElementById('progress-percentage-text');
+            const totalDaysSpan = document.getElementById('total-days');
+            const messageBox = document.getElementById('message-box');
+
+            let totalDays = 0;
+            let completedDays = 0;
+
+            const motivationalPhrases = [
+                "Parabéns! Cada dia é um passo em direção à sua próxima grande viagem, falando fluentemente.",
+                "Mais um dia concluído! O seu esforço de hoje é o passaporte para as oportunidades de amanhã.",
+                "Excelente! O futuro é bilíngue, e você está construindo o seu com cada caixa marcada.",
+                "A fluência está cada vez mais perto. Em breve, o mundo será o seu playground de negócios e aventuras!",
+                "Você está investindo em si mesmo! Continue assim, e o sucesso financeiro e profissional virá junto com a fluência.",
+                "Continue! A sua dedicação de hoje se transformará em novas experiências e conquistas amanhã."
+            ];
+
+            /**
+             * Formata a data para o formato "DD de MMMM de YYYY".
+             * @param {Date} date A data a ser formatada.
+             * @returns {string} A data formatada.
+             */
+            const formatDate = (date) => {
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                return date.toLocaleDateString('pt-BR', options);
+            };
+
+            /**
+             * Mostra uma mensagem na caixa de mensagem.
+             * @param {string} message A mensagem a ser exibida.
+             * @param {string} type O tipo da mensagem ('success', 'error', 'info').
+             */
+            const showMessage = (message, type) => {
+                messageBox.textContent = message;
+                messageBox.className = `px-4 py-2 text-sm rounded-lg transition-opacity duration-300 ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+                messageBox.classList.remove('hidden');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 4000);
+            };
+
+            /**
+             * Salva o estado dos checkboxes no localStorage.
+             */
+            const saveProgress = () => {
+                try {
+                    const completed = {};
+                    document.querySelectorAll('.day-checkbox').forEach(checkbox => {
+                        completed[checkbox.id] = checkbox.checked;
+                    });
+                    localStorage.setItem('englishStudyProgress', JSON.stringify(completed));
+                } catch (e) {
+                    showMessage('Não foi possível salvar o progresso. Seu navegador pode estar no modo de navegação privada.', 'error');
+                }
+            };
+
+            /**
+             * Carrega o estado dos checkboxes do localStorage.
+             * @returns {object} Um objeto com o estado salvo, ou um objeto vazio se não houver dados.
+             */
+            const loadProgress = () => {
+                try {
+                    const savedProgress = localStorage.getItem('englishStudyProgress');
+                    return savedProgress ? JSON.parse(savedProgress) : {};
+                } catch (e) {
+                    return {};
+                }
+            };
+
+            /**
+             * Atualiza a barra de progresso e o texto.
+             */
+            const updateProgress = () => {
+                completedDays = document.querySelectorAll('.day-checkbox:checked').length;
+                const progressPercentage = totalDays > 0 ? (completedDays / totalDays) * 100 : 0;
+
+                progressBar.style.width = `${progressPercentage}%`;
+                progressPercentageText.textContent = `${progressPercentage.toFixed(0)}%`;
+                progressTextLabel.textContent = completedDays;
+            };
+
+            /**
+             * Gera a lista de dias com checkboxes.
+             */
+            const generateChecklist = () => {
+                checklistContainer.innerHTML = ''; // Limpa o conteúdo existente
+                const savedProgress = loadProgress();
+
+                let currentDate = new Date(tomorrow);
+                let dayCounter = 1;
+                while (currentDate <= endOfYear) {
+                    const dateString = currentDate.toISOString().split('T')[0];
+                    
+                    // Cria o contêiner do item da lista
+                    const dayItem = document.createElement('label');
+                    dayItem.className = 'flex items-center space-x-4 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors duration-200';
+
+                    // Cria o checkbox
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `day-${dateString}`;
+                    checkbox.className = 'day-checkbox h-5 w-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500';
+                    checkbox.checked = savedProgress[`day-${dateString}`] || false;
+                    
+                    // Cria o contêiner do texto
+                    const textContainer = document.createElement('div');
+                    textContainer.className = 'day-item-text flex flex-col';
+
+                    // Cria o texto do item
+                    const text = document.createElement('span');
+                    text.className = 'text-gray-700 font-medium text-base';
+                    text.textContent = `Dia ${dayCounter}: ${formatDate(currentDate)}`;
+
+                    // Cria o contêiner para as mensagens de conclusão e motivação
+                    const messageWrapper = document.createElement('div');
+                    // A classe 'hidden' é usada para garantir que a mensagem não apareça por padrão
+                    messageWrapper.className = 'completion-message-wrapper mt-1 ' + (checkbox.checked ? '' : 'hidden');
+                    
+                    // Cria o texto de conclusão
+                    const completionText = document.createElement('span');
+                    completionText.className = 'font-bold text-green-600';
+                    completionText.textContent = 'Concluído!';
+                    messageWrapper.appendChild(completionText);
+                    
+                    // Cria a frase motivacional
+                    const motivationalText = document.createElement('span');
+                    motivationalText.className = 'block motivational-phrase text-gray-500';
+                    messageWrapper.appendChild(motivationalText);
+                    
+                    // Monta o item
+                    textContainer.appendChild(text);
+                    textContainer.appendChild(messageWrapper);
+                    
+                    dayItem.appendChild(checkbox);
+                    dayItem.appendChild(textContainer);
+                    checklistContainer.appendChild(dayItem);
+
+                    // Se a caixa já estiver marcada, atribui uma frase motivacional
+                    if (checkbox.checked) {
+                        motivationalText.textContent = motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
+                    }
+
+                    // Adiciona o evento de mudança
+                    checkbox.addEventListener('change', () => {
+                        saveProgress();
+                        updateProgress();
+                        if (checkbox.checked) {
+                            // Exibe a mensagem de conclusão e a frase motivacional
+                            messageWrapper.classList.remove('hidden');
+                            motivationalText.textContent = motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
+                            showMessage('Ótimo trabalho! A fluência em inglês está cada vez mais próxima!', 'success');
+                        } else {
+                            // Oculta a mensagem se a caixa for desmarcada
+                            messageWrapper.classList.add('hidden');
+                            motivationalText.textContent = '';
+                        }
+                    });
+
+                    // Avança para o próximo dia
+                    currentDate.setDate(currentDate.getDate() + 1);
+                    dayCounter++;
+                }
+
+                totalDays = dayCounter - 1;
+                totalDaysSpan.textContent = totalDays;
+                updateProgress();
+            };
+
+            // Gera a lista ao carregar a página
+            generateChecklist();
+        })();
+    </script>
+</body>
+</html>
